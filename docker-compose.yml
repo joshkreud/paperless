@@ -1,0 +1,105 @@
+services:
+  broker:
+    image: docker.io/library/redis:7
+    restart: unless-stopped
+    volumes:
+      - redisdata:/data
+
+  db:
+    image: docker.io/library/postgres:16
+    restart: unless-stopped
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    environment:
+      POSTGRES_DB: paperless
+      POSTGRES_USER: paperless
+      POSTGRES_PASSWORD: paperless
+
+  paperless:
+    image: ghcr.io/paperless-ngx/paperless-ngx:latest
+    restart: unless-stopped
+    depends_on:
+      - db
+      - broker
+    volumes:
+      - "data:/usr/src/paperless/data"
+      - "media:/usr/src/paperless/media"
+      - "./export:/usr/src/paperless/export"
+      - "${PAPERLESS_CONSUME_DIR}:/usr/src/paperless/consume"
+    environment:
+      PAPERLESS_REDIS: redis://broker:6379
+      PAPERLESS_DBHOST: db
+      PAPERLESS_URL: https://${TRAEFIK_HOST}
+      PAPERLESS_TASK_WORKERS: 4
+      PAPERLESS_THREADS_PER_WORKER: 4
+      PAPERLESS_CONSUMER_POLLING: 10
+    networks:
+      - default
+      - traefik
+    labels:
+      - traefik.enable=true
+
+      - traefik.http.routers.${COMPOSE_PROJECT_NAME}.service=${COMPOSE_PROJECT_NAME}
+      - traefik.http.routers.${COMPOSE_PROJECT_NAME}.entrypoints=websecure
+      - traefik.http.routers.${COMPOSE_PROJECT_NAME}.rule=Host(`${TRAEFIK_HOST}`)
+      - traefik.http.services.${COMPOSE_PROJECT_NAME}.loadbalancer.server.port=8000
+
+  paperless-ai:
+    image: clusterzx/paperless-ai:latest
+    restart: unless-stopped
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    environment:
+      PAPERLESS_AI_PORT: 8001
+      RAG_SERVICE_URL: http://localhost:8000
+      RAG_SERVICE_ENABLED: "true"
+      PUID: 1000
+      PGID: 1000
+    depends_on:
+      - paperless
+    networks:
+      - traefik
+      - default
+    volumes:
+      - "ai-data:/app/data"
+    labels:
+      - traefik.enable=true
+      - traefik.http.routers.${COMPOSE_PROJECT_NAME}-ai.service=${COMPOSE_PROJECT_NAME}-ai
+      - traefik.http.routers.${COMPOSE_PROJECT_NAME}-ai.entrypoints=websecure
+      - traefik.http.routers.${COMPOSE_PROJECT_NAME}-ai.rule=Host(`${TRAEFIK_AI_HOST}`)
+      - traefik.http.services.${COMPOSE_PROJECT_NAME}-ai.loadbalancer.server.port=8001
+
+  # Backup service: borgmatic with native PostgreSQL dump support
+  backup:
+    build: ./backup
+    restart: unless-stopped
+    depends_on:
+      - db
+    environment:
+      BORG_REPO: ${BORG_REPO}
+      BORG_PASSPHRASE: ${BORG_PASSPHRASE}
+      PGHOST: db
+      PGUSER: paperless
+      PGDATABASE: paperless
+      PGPASSWORD: paperless
+    volumes:
+      - ./backup:/backup:rw
+      - ./backup/.ssh:/root/.ssh:ro
+      - data:/data:ro
+      - media:/media:ro
+    command: ["/backup/entrypoint.sh"]
+    networks:
+      - default
+
+volumes:
+  data:
+  media:
+  pgdata:
+  redisdata:
+  ai-data:
+
+networks:
+  traefik:
+    external: true

@@ -1,0 +1,34 @@
+---
+# Borgmatic configuration for Paperless-ngx backup
+# Docs: https://torsion.org/borgmatic/docs/how-to/backup-your-databases/
+
+source_directories:
+  - /data
+  - /media
+
+repositories:
+  - path: ${BORG_REPO}
+
+# Native PostgreSQL backup — borgmatic streams pg_dump directly into the
+# Borg archive (no extra disk space). Restore with: borgmatic restore --archive latest
+postgresql_databases:
+  - name: ${PGDATABASE:-paperless}
+    hostname: ${PGHOST:-db}
+    username: ${PGUSER:-paperless}
+    password: ${PGPASSWORD}
+    format: custom
+
+archive_name_format: "paperless-{now:%Y-%m-%dT%H:%M:%S}"
+
+# Retention
+keep_daily: 7
+keep_weekly: 4
+keep_monthly: 6
+keep_yearly: 1
+
+# Periodic integrity checks
+checks:
+  - name: repository
+    frequency: 2 weeks
+  - name: archives
+    frequency: 1 month
