@@ -2,10 +2,18 @@
 -include .env
 export
 
+COMPOSE=docker compose
+COMPOSE_AI=docker compose -f docker-compose.yml -f docker-compose.paperless-ai.override.yml
+
 # Run the Stack and Watch Logs
 run:
-	docker compose up -d --force-recreate --remove-orphans
-	docker compose logs -f
+	$(COMPOSE) up -d --force-recreate --remove-orphans
+	$(COMPOSE) logs -f
+
+# Run the Stack with optional Paperless-AI override and watch logs
+run-ai:
+	$(COMPOSE_AI) up -d --force-recreate --remove-orphans
+	$(COMPOSE_AI) logs -f
 
 # On first Launch, initialize the user
 init-user:
@@ -56,6 +64,10 @@ backup-run:
 # Break a stale Borg lock (use after an interrupted backup)
 backup-break-lock:
 	docker compose run --rm backup borgmatic break-lock --config /backup/config.yaml
+
+# Export the Borg repokey — store this somewhere safe to decrypt backups
+backup-export-key:
+	docker compose exec backup borg key export "$(BORG_REPO)" -
 
 
 # List all backup archives

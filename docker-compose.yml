@@ -26,6 +26,7 @@ services:
       - "media:/usr/src/paperless/media"
       - "./export:/usr/src/paperless/export"
       - "${PAPERLESS_CONSUME_DIR}:/usr/src/paperless/consume"
+      - "${PAPERLESS_CONSUME_DIR_MONEYMONEY}:/usr/src/paperless/consume/moneymoney"
     environment:
       PAPERLESS_REDIS: redis://broker:6379
       PAPERLESS_DBHOST: db
@@ -33,6 +34,7 @@ services:
       PAPERLESS_TASK_WORKERS: 4
       PAPERLESS_THREADS_PER_WORKER: 4
       PAPERLESS_CONSUMER_POLLING: 10
+      PAPERLESS_CONSUMER_RECURSIVE: ${PAPERLESS_CONSUMER_RECURSIVE:-true}
     networks:
       - default
       - traefik
@@ -43,33 +45,6 @@ services:
       - traefik.http.routers.${COMPOSE_PROJECT_NAME}.entrypoints=websecure
       - traefik.http.routers.${COMPOSE_PROJECT_NAME}.rule=Host(`${TRAEFIK_HOST}`)
       - traefik.http.services.${COMPOSE_PROJECT_NAME}.loadbalancer.server.port=8000
-
-  paperless-ai:
-    image: clusterzx/paperless-ai:latest
-    restart: unless-stopped
-    cap_drop:
-      - ALL
-    security_opt:
-      - no-new-privileges:true
-    environment:
-      PAPERLESS_AI_PORT: 8001
-      RAG_SERVICE_URL: http://localhost:8000
-      RAG_SERVICE_ENABLED: "true"
-      PUID: 1000
-      PGID: 1000
-    depends_on:
-      - paperless
-    networks:
-      - traefik
-      - default
-    volumes:
-      - "ai-data:/app/data"
-    labels:
-      - traefik.enable=true
-      - traefik.http.routers.${COMPOSE_PROJECT_NAME}-ai.service=${COMPOSE_PROJECT_NAME}-ai
-      - traefik.http.routers.${COMPOSE_PROJECT_NAME}-ai.entrypoints=websecure
-      - traefik.http.routers.${COMPOSE_PROJECT_NAME}-ai.rule=Host(`${TRAEFIK_AI_HOST}`)
-      - traefik.http.services.${COMPOSE_PROJECT_NAME}-ai.loadbalancer.server.port=8001
 
   # Backup service: borgmatic with native PostgreSQL dump support
   backup:
@@ -98,7 +73,6 @@ volumes:
   media:
   pgdata:
   redisdata:
-  ai-data:
 
 networks:
   traefik:

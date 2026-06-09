@@ -41,10 +41,10 @@ if [ $# -gt 0 ]; then
   exec "$@"
 fi
 
-# Otherwise, run borgmatic on a daily schedule
+# Otherwise, run borgmatic every 4 hours
 while true; do
   echo "$(date): Starting borgmatic backup..."
   borgmatic --config /backup/config.yaml --verbosity 1 2>&1 || echo "$(date): borgmatic run failed"
-  echo "$(date): Backup complete. Next run in 24h."
-  sleep 86400
+  echo "$(date): Backup complete. Next run in 4h."
+  sleep 14400
 done

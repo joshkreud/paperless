@@ -1,0 +1,30 @@
+services:
+  paperless-ai:
+    image: clusterzx/paperless-ai:latest
+    restart: unless-stopped
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    environment:
+      PAPERLESS_AI_PORT: 8001
+      RAG_SERVICE_URL: http://localhost:8000
+      RAG_SERVICE_ENABLED: "true"
+      PUID: 1000
+      PGID: 1000
+    depends_on:
+      - paperless
+    networks:
+      - default
+      - traefik
+    volumes:
+      - ai-data:/app/data
+    labels:
+      - traefik.enable=true
+      - traefik.http.routers.${COMPOSE_PROJECT_NAME}-ai.service=${COMPOSE_PROJECT_NAME}-ai
+      - traefik.http.routers.${COMPOSE_PROJECT_NAME}-ai.entrypoints=websecure
+      - traefik.http.routers.${COMPOSE_PROJECT_NAME}-ai.rule=Host(`${TRAEFIK_AI_HOST}`)
+      - traefik.http.services.${COMPOSE_PROJECT_NAME}-ai.loadbalancer.server.port=8001
+
+volumes:
+  ai-data:

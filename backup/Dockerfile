@@ -1,10 +1,20 @@
-FROM librespace/borgmatic:latest
+FROM ghcr.io/astral-sh/uv:latest AS uv-installer
+FROM python:3.12-slim
 
-# Ensure PostgreSQL client tools and SSH client are available
-RUN apk add --no-cache openssh-client \
-    && (apk add --no-cache postgresql16-client 2>/dev/null \
-    || apk add --no-cache postgresql-client 2>/dev/null \
-    || true)
+# Copy uv binary from official uv image
+COPY --from=uv-installer /uv /usr/local/bin/uv
 
-# Override base image entrypoint so it doesn't try to generate SSH keys
+# Install Borg, PostgreSQL client tools, and SSH client
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    borgbackup \
+    openssh-client \
+    postgresql-client \
+    && rm -rf /var/lib/apt/lists/*
+
+# Use uv to install borgmatic into system site-packages
+RUN uv pip install --system borgmatic
+
+# Set working directory for config
+WORKDIR /backup
+
 ENTRYPOINT []
