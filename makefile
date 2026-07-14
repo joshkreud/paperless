@@ -2,16 +2,20 @@
 -include .env
 export
 
-COMPOSE=docker compose
-COMPOSE_AI=docker compose -f docker-compose.yml -f docker-compose.paperless-ai.override.yml
+CONSUME_OVERRIDE=$(wildcard docker-compose.consume.yml)
+COMPOSE=docker compose -f docker-compose.yml $(if $(CONSUME_OVERRIDE),-f $(CONSUME_OVERRIDE),)
+COMPOSE_AI=docker compose -f docker-compose.yml $(if $(CONSUME_OVERRIDE),-f $(CONSUME_OVERRIDE),) -f docker-compose.paperless-ai.override.yml
 
 # Run the Stack and Watch Logs
-run:
+prepare:
+	@scripts/generate-consume-override.sh
+
+run: prepare
 	$(COMPOSE) up -d --force-recreate --remove-orphans
 	$(COMPOSE) logs -f
 
 # Run the Stack with optional Paperless-AI override and watch logs
-run-ai:
+run-ai: prepare
 	$(COMPOSE_AI) up -d --force-recreate --remove-orphans
 	$(COMPOSE_AI) logs -f
 

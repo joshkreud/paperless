@@ -5,3 +5,5 @@ pdf-edit-*
 paperless-consume
 consume_new
 backup/.ssh/
+# Generated compose override from paperless-consume symlinks
+docker-compose.consume.yml

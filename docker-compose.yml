@@ -25,8 +25,6 @@ services:
       - "data:/usr/src/paperless/data"
       - "media:/usr/src/paperless/media"
       - "./export:/usr/src/paperless/export"
-      - "${PAPERLESS_CONSUME_DIR}:/usr/src/paperless/consume"
-      - "${PAPERLESS_CONSUME_DIR_MONEYMONEY}:/usr/src/paperless/consume/moneymoney"
     environment:
       PAPERLESS_REDIS: redis://broker:6379
       PAPERLESS_DBHOST: db

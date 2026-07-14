@@ -30,6 +30,32 @@ TRAEFIK_AI_HOST=ai.example.com       # AI UI hostname
 COMPOSE_PROJECT_NAME=paperless       # Traefik label prefix
 ```
 
+## Consume Directory
+
+Paperless watches `/usr/src/paperless/consume` inside the container for new
+documents. Instead of hardcoding host paths in `docker-compose.yml`, each
+source directory is a symlink under `paperless-consume/`:
+
+```bash
+ln -s "/path/to/scanner/output"      paperless-consume/quickscan
+ln -s "/path/to/moneymoney/exports"  paperless-consume/moneymoney
+```
+
+`make prepare` (run automatically by `make run`/`make run-ai`) resolves every
+symlink in `paperless-consume/` and regenerates `docker-compose.consume.yml`,
+bind-mounting each target at `consume/<symlink-name>` — e.g. the `quickscan`
+symlink above becomes `/usr/src/paperless/consume/quickscan`. The generated
+file is gitignored; `paperless-consume/` itself only holds symlinks, never
+real documents.
+
+To add or remove a source, add/remove the symlink and re-run `make prepare`
+(or just `make run`, which always regenerates first). With
+`PAPERLESS_CONSUMER_RECURSIVE=true` (default), paperless watches every
+subdirectory of `consume/` automatically.
+
+**Note:** paperless deletes each file from its source directory immediately
+after successful consumption — these are inboxes, not storage.
+
 ## Optional: Paperless-AI
 
 Paperless-AI is not started by default. To enable it, include the override file:
